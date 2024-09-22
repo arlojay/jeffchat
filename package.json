@@ -4,7 +4,7 @@
   "description": "My webpack project",
   "main": "index.js",
   "scripts": {
-    "build-dev": "webpack --mode=development",
+    "build-dev": "webpack --mode=development --watch",
     "build-prod": "webpack --mode=production --node-env=production",
     "watch": "webpack --watch"
   },
@@ -12,6 +12,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@msgpack/msgpack": "^3.0.0-beta2",
     "@types/node": "^22.5.4",
     "peerjs": "^1.5.4",
     "tsd": "^0.31.2"

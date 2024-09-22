@@ -3,8 +3,8 @@
     "allowSyntheticDefaultImports": true,
     "noImplicitAny": true,
     "module": "NodeNext",
-    "target": "es5",
+    "target": "ESNext",
     "allowJs": true
   },
-  "files": ["src/index.ts"]
+  "files": ["src/app/index.ts"]
 }
