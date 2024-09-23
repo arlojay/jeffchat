@@ -3,7 +3,6 @@ import { Serializable } from "./serializable";
 import { Address, AddressDBEntry } from "./address";
 import { MasterContactProgram } from "./contactProgram/masterContactProgram";
 import { SecureConnection } from "./secureConnection";
-import { encode } from "@msgpack/msgpack";
 
 export interface ContactDBEntry {
     id: string,
@@ -47,8 +46,6 @@ export class Contact implements Serializable {
         const client = getClient();
         const newConnection = await client.socket.connect(this.address);
 
-        await newConnection.startHandshake();
-
         return newConnection;
     }
     
@@ -62,5 +59,10 @@ export class Contact implements Serializable {
     public async deserialize(data: any) {
         this.username = data.username;
         await this.address.deserialize(data.address);
+    }
+
+    
+    async update() {
+        await getClient().contactList.updateContact(this);
     }
 }

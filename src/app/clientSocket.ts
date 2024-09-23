@@ -3,6 +3,7 @@ import { getClient } from ".";
 import { Address } from "./address";
 import { log } from "./index";
 import { SecureConnection } from "./secureConnection";
+import { Contact } from "./contact";
 
 export class ClientSocket {
     peer: Peer | null;
@@ -18,7 +19,8 @@ export class ClientSocket {
         return new Promise((res, rej) => {
             this.peer = new Peer(preferredId, {
                 host: "peerjs.arlojay.cc",
-                port: 443
+                port: 443,
+                
             });
 
             this.peer.addListener("disconnected", (id) => {
@@ -32,23 +34,35 @@ export class ClientSocket {
                 rej(error.message);
             });
             this.peer.addListener("connection", async (connection) => {
-                console.log("connection");
-                const contact = await this.getContact(connection);
-                const secureConnection = new SecureConnection(contact, connection);
-                this.connections.set(contact.id, secureConnection);
-
-                await this.initConnection(secureConnection);
-
-                console.log("connection opened from " + secureConnection.contact.username);
-                await secureConnection.respondHandshake();
-
-                secureConnection.addListener("data", data => secureConnection.contact.program.onData(data));
-                secureConnection.contact.program.onConnected();
+                this.respondToConnection(connection);
             });
             this.peer.addListener("close", () => {
                 rej("Premature closure");
             });
         });
+    }
+
+    private async respondToConnection(connection: DataConnection) {
+        console.log("connection");
+        const contact = await this.getContact(connection);
+        const secureConnection = new SecureConnection(contact, connection);
+        this.connections.set(contact.id, secureConnection);
+
+        await this.initConnection(secureConnection);
+
+        console.log("connection opened from " + secureConnection.contact.username);
+
+        try {
+            await secureConnection.respondHandshake();
+        } catch(e) {
+            secureConnection.close();
+            throw e;
+        }
+
+        secureConnection.addListener("data", data => secureConnection.contact.program.onData(data));
+        secureConnection.contact.program.onConnected();
+
+        await getClient().contactList.addContact(contact);
     }
 
     public async connect(address: Address): Promise<SecureConnection> {
@@ -62,6 +76,13 @@ export class ClientSocket {
         this.connections.set(otherId, secureConnection);
 
         await this.initConnection(secureConnection);
+
+        try {
+            await secureConnection.startHandshake();
+        } catch(e) {
+            secureConnection.close();
+            throw e;
+        }
         
         secureConnection.addListener("data", data => secureConnection.contact.program.onData(data));
         secureConnection.contact.program.onConnected();
@@ -69,7 +90,7 @@ export class ClientSocket {
     }
 
     private async getContact(connection: DataConnection) {
-        return await getClient().contactList.getContactById(connection.peer);
+        return await getClient().contactList.getContactById(connection.peer) ?? new Contact;
     }
 
     private async initConnection(secureConnection: SecureConnection): Promise<void> {

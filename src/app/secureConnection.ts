@@ -3,11 +3,7 @@ import { Contact } from "./contact";
 import { getClient } from ".";
 import { decode, encode } from "@msgpack/msgpack";
 import EventEmitter from "events";
-
-interface HandshakeRequest {
-    stage: number;
-    data: ArrayBuffer;
-}
+import { deriveMessageSecret, exportJwk, importJwk } from "./cryptoUtil";
 
 interface EncryptedPacket {
     i: ArrayBuffer,
@@ -30,6 +26,8 @@ export class SecureConnection extends EventEmitter {
     public connection: DataConnection;
     public bufferCount = 0;
     public processingCount = 0;
+
+    private contactPublicMessageKey: CryptoKey;
 
 
     constructor(contact: Contact, connection: DataConnection) {
@@ -73,8 +71,9 @@ export class SecureConnection extends EventEmitter {
 
     async createSecretKey() {
         console.log("Create secret key");
-        this.secretKey = await this.contact.address.deriveMessageKey(
-            getClient().identity.messageKey.privateKey
+        this.secretKey = await deriveMessageSecret(
+            getClient().identity.messageKey.privateKey,
+            this.contactPublicMessageKey
         );
         console.log("Created secret key");
     }
@@ -136,71 +135,150 @@ export class SecureConnection extends EventEmitter {
     public async respondHandshake() {
         if(!this.connected) throw new Error("Cannot listen for handshake request when connection is closed");
 
+        // Stage 0: let peer know the client is ready to receieve data
         this.connection.send({
-            stage: 0,
-            data: new ArrayBuffer(0)
+            stage: 0
         });
 
-        const request: HandshakeRequest | null = await this.expectResponse(this.connection, 10000);
+        // Stage 1: decrypt the peer's encrypted handshake challenge and resend it,
+        //          encrypted with the client's key (alongside public messaging key).
+        //          Also receives the peer's public id key (which is unverified)
+        const request = await this.expectResponse(this.connection, 10000);
         console.log(request);
 
         if(request == null) throw new Error("Malformed handshake request");
         if(!(request.data instanceof ArrayBuffer)) throw new Error("Encrypted data is not an ArrayBuffer");
         if(request.data.byteLength != 256) throw new Error("Malformed handshake request");
 
-        const clientPrivateKey = getClient().identity.addressKey.privateKey;
-        const contactPublicKey = await this.contact.address.getIdKey();
+
+        let contactPublicAddressKey: CryptoKey;
+
+        if(this.contact.address.addressKey == null) {
+        
+            // Load peer's public address key
+            if(typeof request.addressKey != "object") throw new Error("Address key not found");
+
+            try {
+                contactPublicAddressKey = await importJwk(request.addressKey, { name: "RSA-OAEP", hash: "SHA-256" });
+            } catch(e) {
+                console.debug(e);
+                throw new Error("Invalid address key");
+            }
+
+            const dummy = new Contact;
+            await dummy.address.setAddressKey(contactPublicAddressKey);
+            if(dummy.id != this.connection.peer) throw new Error("Illegitimate address key");
+        } else {
+            contactPublicAddressKey = await this.contact.address.getAddressKey();
+        }
+
+        const clientPublicMessageKey = getClient().identity.messageKey.publicKey;
+        const clientPrivateAddressKey = getClient().identity.addressKey.privateKey;
 
         const decryptedData = await crypto.subtle.decrypt(
             { name: "RSA-OAEP" },
-            clientPrivateKey, request.data
+            clientPrivateAddressKey, request.data
         );
 
         const encryptedData = await crypto.subtle.encrypt(
             { name: "RSA-OAEP" },
-            contactPublicKey, decryptedData
+            contactPublicAddressKey, decryptedData
         );
 
+        // Stage 2: peer verifies legitimacy of the client's keys (and sets username if specified)
         this.connection.send({
             stage: 2,
-            data: encryptedData
+            data: encryptedData,
+            messageKey: await exportJwk(clientPublicMessageKey),
+            username: getClient().identity.username
         });
         
-        const finalizePromise = this.expectResponse(this.connection, 5000);
-        await this.createSecretKey();
-        await finalizePromise;
+        // Stage 3: peer sends their public messaging key for secret key derivation (and sets their username if sent)
+        const finalizeData = await this.expectResponse(this.connection, 5000);
 
+        // Load peer's public messaging key
+        if(typeof finalizeData.messageKey != "object") throw new Error("Message key not found");
+        try {
+            this.contactPublicMessageKey = await importJwk(finalizeData.messageKey, { name: "ECDH", namedCurve: "P-256" });
+        } catch(e) {
+            console.debug(e);
+            throw new Error("Invalid message key");
+        }
+
+        if(typeof finalizeData.username == "string") {
+            if(this.contact.username != finalizeData.username) {
+                this.contact.username = finalizeData.username;
+                await this.contact.update();
+            }
+        }
+
+        await this.createSecretKey();
+
+        // Stage 4: let peer know the client is done with the handshake
+        this.connection.send({
+            stage: 4
+        });
+
+        // Authentication complete
         this.authenticated = true;
     }
 
     public async startHandshake() {
         if(!this.connected) throw new Error("Cannot start handshake request when connection is closed");
+
+        // Stage 0: wait for peer to be ready for data
         const setupResponse = this.expectResponse(this.connection, 4000);
 
-        const contactPublicKey = await this.contact.address.getIdKey();
+        // Create handshake challenge while waiting
+        const clientPublicMessageKey = getClient().identity.messageKey.publicKey;
+        const clientPrivateAddressKey = getClient().identity.addressKey.privateKey;
+        const clientPublicAddressKey = getClient().identity.addressKey.publicKey;
+        const contactPublicAddressKey = await this.contact.address.getAddressKey();
+
         const handshakeData = crypto.getRandomValues(new Uint8Array(190));
         const encryptedData = await crypto.subtle.encrypt(
             { name: "RSA-OAEP" },
-            contactPublicKey, handshakeData.buffer
+            contactPublicAddressKey, handshakeData.buffer
         );
 
+        // Wait for stage 0 response
         await setupResponse;
 
+        // Stage 1: create handshake challenge
         this.connection.send({
             stage: 1,
-            data: encryptedData
+            data: encryptedData,
+            addressKey: await exportJwk(clientPublicAddressKey)
         });
 
-        const response: HandshakeRequest | null = await this.expectResponse(this.connection, 5000);
+        // Stage 2: peer decrypts data and resends encrypted (alongside public message key for deriving secret and username)
+        const response = await this.expectResponse(this.connection, 5000);
 
         if(response == null) throw new Error("Malformed handshake response");
-        if(!(response.data instanceof ArrayBuffer)) throw new Error("Decrypted data is not an ArrayBuffer");
+        if(!(response.data instanceof ArrayBuffer)) throw new Error("Data is not an ArrayBuffer");
         if(response.data.byteLength != 256) throw new Error("Malformed handshake response");
+        if(typeof response.messageKey != "object") throw new Error("Message key not found");
 
-        const clientPrivateKey = getClient().identity.addressKey.privateKey;
+        // Load peer's public message key
+        try {
+            console.log(response);
+            this.contactPublicMessageKey = await importJwk(response.messageKey, { name: "ECDH", namedCurve: "P-256" });
+        } catch(e) {
+            console.debug(e);
+            throw new Error("Invalid message key");
+        }
+
+        if(typeof response.username == "string") {
+            if(this.contact.username != response.username) {
+                this.contact.username = response.username;
+                await this.contact.update();
+            }
+        }
+
+        // Check handshake equivalence
         const decryptedData = await crypto.subtle.decrypt(
             { name: "RSA-OAEP" },
-            clientPrivateKey, response.data
+            clientPrivateAddressKey, response.data
         );
         const decryptedDataView = new Uint8Array(decryptedData);
 
@@ -209,12 +287,23 @@ export class SecureConnection extends EventEmitter {
             if(decryptedDataView[i] != handshakeData[i]) throw new Error("Received key is illegitimate");
         }
         
-        await this.createSecretKey();
+        // Stage 3: send client's public message key
         this.connection.send({
             stage: 3,
-            data: new ArrayBuffer(0)
+            messageKey: await exportJwk(clientPublicMessageKey),
+            username: getClient().identity.username
         });
 
+
+        // Stage 4: wait for peer to be ready for data
+
+        // Create secret key while waiting
+        const createSecretKeyPromise = this.createSecretKey();
+
+        await this.expectResponse(this.connection, 5000);
+        await createSecretKeyPromise;
+
+        // Authentication complete
         this.authenticated = true;
     }
     close() {

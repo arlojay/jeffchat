@@ -38,3 +38,13 @@ export async function importJwkPair(key: SerializedJwkPair, algorithm: CryptoAlg
         publicKey: await importJwk(key.publicKey, algorithm)
     }
 }
+
+export async function deriveMessageSecret(privateMessageKey: CryptoKey, publicMessageKey: CryptoKey) {
+    return await crypto.subtle.deriveKey(
+        { name: "ECDH", public: publicMessageKey },
+        privateMessageKey,
+        { name: "AES-GCM", length: 256 },
+        false,
+        [ "encrypt", "decrypt" ]
+    );
+}

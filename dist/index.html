@@ -8,48 +8,113 @@
 <script defer src="main.js"></script></head>
 
 <body>
-    <h2 id="username" hidden></h2>
-    <fieldset id="connect-modal" class="modal" hidden>
-        <legend>Connect to ID</legend>
-        <form>
-            <div>
-                <label for="id">Contact ID</label>
-                <input type="text" name="id">
+    <div id="sidebar">
+        <div class="sidebar-option" data-tabname="settings">
+            SETTINGS
+        </div>
+        <div class="sidebar-option" data-tabname="contacts">
+            CONTACTS
+        </div>
+    </div>
+    <div id="content">
+        <div class="content-tab" data-tabname="settings">
+            <h1 class="top">Settings</h1>
+            <div class="main">
+                <h1 id="username" hidden></h1>
+                <hr>
+                <div id="connect-modal" class="modal" hidden>
+                    <h2>Connect to ID</h2>
+                    <form>
+                        <div>
+                            <label for="id">Contact ID</label>
+                            <input type="text" name="id">
+                        </div>
+                        <div>
+                            <input type="submit" value="Connect">
+                        </div>
+                    </form>
+                    <hr>
+                </div>
+                <div id="import-identity-modal" class="modal" hidden>
+                    <h2>Add Contact</h2>
+                    <form>
+                        <div>
+                            <input type="submit" value="Select File">
+                        </div>
+                        <p>Import someone else's identity file <code>(identity-&lt;username&gt;.pub)</code></p>
+                    </form>
+                    <hr>
+                </div>
+                <div id="address-modal" class="modal" hidden>
+                    <h2>Create an address</h2>
+                    <form>
+                        <input type="text" name="username">
+                        <input type="submit" value="Create Address">
+                    </form>
+                    <hr>
+                </div>
+                <div id="export-identity-modal" class="modal" hidden>
+                    <h2>Export your identity</h2>
+                    <button id="export-identity">Export Identity File</button>
+                    <hr>
+                </div>
+                <div class="modal">
+                    <h2>Debug</h2>
+                    <button id="debug">Debug</button>
+                    <button id="delete-database">Delete Database</button>
+                    <hr>
+                </div>
+                <textarea id="logs" readonly rows="20" cols="70"></textarea>
             </div>
-            <div>
-                <input type="submit" value="Connect">
+        </div>
+        <div class="content-tab" data-tabname="contacts">
+            <h1 class="top">Contacts</h1>
+            <div class="main">
+                <fieldset id="contacts-modal" class="modal" hidden>
+                    <legend>Contacts</legend>
+                    <ul id="contacts"></ul>
+                </fieldset>
             </div>
-        </form>
-    </fieldset>
-    <fieldset id="import-identity-modal" class="modal" hidden>
-        <legend>Add Contact</legend>
-        <form>
-            <span>Import an identity file (identity-username.pub)</span>
-            <div>
-                <input type="submit" value="Add">
+        </div>
+        <div class="content-tab" data-tabname="chat">
+            <h1 class="top">Chat with <span id="contact-username"></span></h1>
+            <div class="main">
+                <div class="chat-logs">
+                    <div class="message incoming">
+                        <header>
+                            <span class="author">Bob</span>
+                            <time>1m</time>
+                        </header>
+                        <p>
+                            hello
+                        </p>
+                    </div>
+                    <div class="message outgoing">
+                        <header>
+                            <span class="author">You</span>
+                            <time>49s</time>
+                        </header>
+                        <p>
+                            hi
+                        </p>
+                    </div>
+                    <div class="message incoming">
+                        <header>
+                            <span class="author">Bob</span>
+                            <time>4s</time>
+                        </header>
+                        <p>
+                            Lorem, ipsum dolor sit amet consectetur adipisicing elit. Ipsam deleniti natus id illo quod facilis quia placeat ex consectetur in. Adipisci ad, magni dolore laboriosam vitae ab doloremque asperiores odio consequuntur, qui, magnam laudantium ipsa? Qui cum consequatur ab dolorum quod necessitatibus sit voluptas iure odio pariatur, minima nostrum a atque magni impedit fuga accusantium magnam maxime porro iusto perspiciatis voluptate at sed culpa. Nesciunt omnis magni a eos repellat laudantium cumque et enim dolor animi iste aliquid tenetur corrupti fugit reprehenderit, error deserunt. Amet molestias, odit quas cumque accusamus quae ducimus aliquam nemo voluptatem saepe soluta dolorem eius numquam repellat laudantium voluptatum consequatur quod ut. Et velit numquam architecto distinctio at. Consectetur eum omnis optio provident sapiente impedit saepe vitae, adipisci similique alias aut sunt cum voluptatibus accusantium fugit illum ad blanditiis autem deserunt iure debitis unde veritatis quidem. Odit, eaque. Unde sed in excepturi itaque cupiditate eius veniam laudantium ea. Eaque, quidem ab perspiciatis veniam excepturi impedit iste accusamus delectus praesentium dolorum, ratione nulla earum eos voluptatibus reiciendis magni a, maxime nobis. Eius veniam nesciunt harum inventore. Laudantium, sunt illum odio odit, eos perspiciatis harum soluta iusto modi consequatur adipisci, tempora quam molestiae pariatur sit? Hic cumque dolore nobis praesentium incidunt numquam delectus fuga minus in, illum, soluta consequatur deserunt facilis ex deleniti, nam repudiandae! Neque, explicabo tempore illo et quasi officia nisi quo commodi, iure, ab at animi quia laborum porro. Eum iusto maiores aperiam. Eum a ut tempore rerum libero. Incidunt suscipit eius ullam optio tempore consequatur quos doloribus quas porro unde impedit inventore obcaecati saepe quidem quaerat ipsum deserunt totam odit repudiandae, facere rem! Quisquam unde illo culpa optio rem veritatis vero voluptatum laborum doloribus consectetur, qui dolorem, tenetur neque possimus. Ut totam repellendus unde amet sit officia asperiores quasi explicabo? Cupiditate quod deleniti nemo animi voluptatibus! Reprehenderit doloremque officiis, hic asperiores voluptates culpa, excepturi, nisi non quaerat molestiae rem? Vel illo eius alias provident, beatae nobis harum quibusdam accusamus? Doloremque nisi temporibus accusamus suscipit ea? Veritatis nesciunt nisi saepe quibusdam consequuntur repellendus rerum a at similique? Veniam, praesentium. Sint, laudantium molestias aut ipsa perspiciatis repellat quis rem atque aspernatur eveniet et sapiente? Deleniti non ab fugiat molestias doloremque, aperiam at quia ex magnam consequuntur excepturi ullam omnis beatae ducimus nobis, cum ut temporibus! Illo dolorum corrupti sed tempore veniam architecto animi corporis, explicabo nostrum, accusamus harum molestias. Sapiente totam molestiae quod sed ullam qui in omnis rerum? Ullam neque vitae minima molestias voluptate voluptatem cupiditate laboriosam consequatur architecto aperiam. Cumque rerum sequi ab amet vero, fugit odio optio mollitia repudiandae impedit tempore sint accusamus quo alias possimus. Odit amet dignissimos incidunt recusandae optio ab accusamus voluptas tempora. Quis molestiae quo quisquam laborum adipisci tempore placeat sequi, consequuntur alias rem? Voluptate dolor, alias pariatur officiis rem unde temporibus accusantium fugiat, vel aspernatur est aliquid ipsam? Molestiae quo sit sunt asperiores corporis repellat dolorem quas adipisci doloremque rerum consequuntur minus, voluptates corrupti unde excepturi architecto quasi iste vero nisi perspiciatis eligendi accusantium. Fugit reiciendis libero error.
+                        </p>
+                    </div>
+                </div>
+                <form class="chat-box">
+                    <input type="text" name="message" placeholder="Send a message">
+                    <input type="submit" value="Send">
+                </form>
             </div>
-        </form>
-    </fieldset>
-    <fieldset id="address-modal" class="modal" hidden>
-        <legend>Create an address</legend>
-        <form>
-            <input type="text" name="username">
-            <input type="submit" value="Create Address">
-        </form>
-    </fieldset>
-    <fieldset id="export-identity-modal" class="modal" hidden>
-        <legend>Export your identity</legend>
-        <button id="export-identity">Export Identity File</button>
-    </fieldset>
-    <fieldset id="contacts-modal" class="modal" hidden>
-        <legend>Contacts</legend>
-        <ul id="contacts"></ul>
-    </fieldset>
-    <fieldset class="modal">
-        <legend>Debug</legend>
-        <button id="debug">Debug</button>
-    </fieldset>
-    <textarea id="logs" readonly rows="20" cols="70"></textarea>
+        </div>
+    </div>
 </body>
 <script src="sw.js"></script>
 

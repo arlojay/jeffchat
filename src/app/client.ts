@@ -36,6 +36,6 @@ export class Client {
         await this.contactList.loadAllContacts();
     }
     hasIdentity(): boolean {
-        return this.identity.address.idKey != null;
+        return this.identity.address.addressKey != null;
     }
 }

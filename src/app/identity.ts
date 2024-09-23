@@ -65,7 +65,7 @@ export class Identity implements Serializable {
 
     async exportIdentityFile(): Promise<string> {
         return await obfuscate(JSON.stringify([
-            this.address.idKey, this.username, this.address.messageKey
+            this.address.addressKey, this.username
         ]));
     }
 }

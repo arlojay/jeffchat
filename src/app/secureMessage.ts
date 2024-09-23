@@ -3,9 +3,9 @@ import { DataStream } from "./dataStream";
 import { Serializable } from "./serializable";
 
 export class SecureMessage implements Serializable {    
-    private static generateNonce(): string {
+    private static async generateNonce(): Promise<string> {
         const randomBytes = new Uint8Array(512).map(v => Math.random() * 256);
-        return bufferToBase64(randomBytes);
+        return await bufferToBase64(randomBytes);
     }
 
     recipient: string;
@@ -15,7 +15,10 @@ export class SecureMessage implements Serializable {
     constructor(recipient: string = "", message: string = "") {
         this.recipient = recipient;
         this.message = message;
-        this.nonce = SecureMessage.generateNonce();
+    }
+
+    async createNonce() {
+        this.nonce = await SecureMessage.generateNonce();
     }
 
     public async serialize(): Promise<ArrayBuffer> {

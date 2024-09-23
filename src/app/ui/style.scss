@@ -1,0 +1,203 @@
+@import './variables.scss';
+@import url('https://fonts.googleapis.com/css2?family=Baloo+Da+2:wght@400..800&display=swap');
+
+@import './fontawesome/scss/fontawesome.scss';
+@import './fontawesome/scss/solid.scss';
+
+$color_main: #063ed8;
+
+html, body {
+    width: 100%;
+    height: 100%;
+}
+
+[hidden] {
+    display: none !important;
+}
+
+body {
+    background: #000;
+    color: white;
+    font: 1rem 'Baloo Da 2', Arial, sans-serif;
+    
+    margin: 0px;
+    overflow: hidden;
+
+    display: grid;
+    grid-template-columns: 4rem 1fr;
+}
+
+%input {
+    color: inherit;
+    background: $color_main;
+    border: none;
+    outline: none;
+
+    font: inherit;
+
+    padding: 0.1rem 0.5rem;
+}
+
+input[type="text"] {
+    @extend %input;
+
+    background: #111;
+}
+
+button, input[type="submit"] {
+    @extend %input;
+
+    user-select: none;
+
+    &:not(:disabled) {
+        cursor: pointer;
+    }
+    &:disabled {
+        background: #444;
+        color: #fff8;
+
+        pointer-events: none;
+    }
+    &:focus-visible {
+        outline: 0.1rem solid #fff;
+    }
+    &:active {
+        background: mix($color_main, #000, 60%);
+    }
+}
+
+#logs {
+    background: transparent;
+    color: inherit;
+
+    border: none;
+    outline: 0.1rem solid #fff;
+
+    overflow: auto;
+}
+
+#sidebar {
+    background: #333;
+
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    z-index: 2;
+
+    width: 4rem;
+    padding: 0.5rem;
+    box-sizing: border-box;
+
+    box-shadow: 0px 0px 4px #0008;
+    
+    .sidebar-option {
+        width: 3rem;
+        height: 3rem;
+        background: #222;
+
+        overflow: hidden;
+        overflow-wrap: break-word;
+
+        cursor: pointer;
+        user-select: none;
+    }
+}
+
+#content {
+    background: #181818;
+
+    height: 100%;
+    z-index: 0;
+
+    overflow: hidden;
+
+    .content-tab {
+        height: 100%;
+        display: grid;
+        grid-template-rows: max-content 1fr;
+        
+        .top {
+            background: #444;
+            box-shadow: 0px 0px 4px #0008;
+
+            padding: 1rem 2rem;
+            margin: 0;
+            z-index: 1;
+        }
+        .main {
+            padding: 1rem;
+            box-sizing: border-box;
+
+            overflow: auto;
+        }
+    }
+}
+
+[data-tabname="chat"] .main {
+    display: grid;
+    grid-template-rows: 1fr max-content;
+
+    .chat-logs {
+        display: flex;
+        flex-direction: column;
+
+        overflow: hidden;
+
+        .message {
+            --color: #000;
+            
+            display: grid;
+            grid-template-rows: repeat(2, max-content);
+            
+            width: 100%;
+            overflow: hidden;
+
+            &.outgoing {
+                --color: rgb(60, 36, 11);
+                text-align: left;
+                justify-items: start;
+            }
+            &.incoming {
+                --color: rgb(11, 11, 60);
+                text-align: right;
+                justify-items: end;
+            }
+
+            header {
+                .author {
+                    &::after {
+                        content: ", "
+                    }
+                }
+                time {
+                    &::after {
+                        content: " ago"
+                    }
+                }
+            }
+            p {
+                background: var(--color);
+
+                min-width: 10%;
+                max-width: 50%;
+                width: max-content;
+            
+                overflow: hidden;
+                overflow-wrap: anywhere;
+                white-space: balance;
+
+                margin: 0px;
+                padding: 0.1rem 1rem;
+                box-sizing: border-box;
+            }
+        }
+    }
+
+    .chat-box {
+        height: 2rem;
+
+        display: grid;
+        grid-template-columns: 1fr max-content;
+        gap: 1rem;
+    }
+}

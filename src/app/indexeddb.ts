@@ -31,7 +31,7 @@ export class ObjectStore {
     }
     createWriteTransaction() {
         this.writeTransaction = this.db.indexedDB.transaction(this.name, "readwrite");
-        const rm = (): any => (this.readTransaction as IDBTransaction | null) = null;
+        const rm = (): any => (this.writeTransaction as IDBTransaction | null) = null;
         
         this.writeTransaction.addEventListener("abort", rm);
         this.writeTransaction.addEventListener("complete", rm);
@@ -161,5 +161,9 @@ export class IndexedDatabase {
 
     public objectStore(name: string) {
         return this.objectStores.get(name);
+    }
+
+    public close() {
+        this.indexedDB.close();
     }
 }

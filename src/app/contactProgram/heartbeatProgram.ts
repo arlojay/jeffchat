@@ -10,16 +10,17 @@ MasterContactProgram.registerProgram(
     }
 );
 
-const HEARTBEAT_TIME = 5000;
+const HEARTBEAT_TIME = 2000;
 
 export class HeartbeatProgram extends ContactProgram {
     private interval: NodeJS.Timeout;
     private lastHeartbeat: number;
 
     async init(): Promise<void> {
+        console.log("init heartbeat");
         this.interval = setInterval(() => {
             this.heartbeat();
-        }, 500);
+        }, 230);
     }
     async stop(): Promise<void> {
         clearInterval(this.interval);

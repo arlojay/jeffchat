@@ -1,7 +1,6 @@
 import { Client } from "./client";
 import { IndexedDatabase } from "./indexeddb";
-
-const DB_VERSION = 4;
+import { initUI, populateUI } from "./ui/ui";
 
 let client: Client;
 let db: IndexedDatabase;
@@ -12,8 +11,7 @@ main().catch(e => {
 });
 
 async function main() {
-    log("Creating modals");
-    initModals();
+    initUI();
 
     log("Opening database");
     db = new IndexedDatabase("jeffchat");
@@ -36,36 +34,9 @@ async function main() {
     log("Loading contacts");
     await client.contactList.loadAllContacts();
 
-    const contactList = document.querySelector("#contacts");
-    for await(const id of client.contactList.contacts.keys()) {
-        const contact = await client.contactList.getContactById(id);
-
-        const listItem = document.createElement("li");
-
-        const label = document.createElement("span");
-        label.textContent = contact.username;
-
-        const connectButton = document.createElement("button");
-        connectButton.textContent = "Connect";
-        connectButton.addEventListener("click", async () => {
-            connectButton.disabled = true;
-
-            console.log(contact);
-            try {
-                const connection = await contact.connect();
-                connection.addListener("close", () => {
-                    connectButton.disabled = false;
-                })
-            } catch(e) {
-                connectButton.disabled = false;
-            }
-        });
-        
-        listItem.append(label, connectButton);
-        contactList.appendChild(listItem);
-    }
+    await populateUI();
 }
-async function login() {
+export async function login() {
     if(client.hasIdentity()) {
         log("Logging in with username " + client.identity.username);
         try {
@@ -89,97 +60,6 @@ async function login() {
     }
 }
 
-function initModals() {
-    const addressModal = document.querySelector("#address-modal") as HTMLFieldSetElement;
-    const addressModalForm = addressModal.querySelector("form") as HTMLFormElement;
-    addressModalForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        try {
-            const data = new FormData(addressModalForm);
-            const username = data.get("username") as string;
-
-            log("Creating identity with username " + username);
-
-            await client.identity.createNew(username);
-            log("Saving client config");
-            await client.save();
-
-            (document.querySelector("#address-modal") as HTMLFieldSetElement).hidden = true;
-            await login();
-        } catch(e) {
-            log(e.stack ?? e);
-            throw e;
-        }
-    });
-
-    const connectModal = document.querySelector("#connect-modal") as HTMLFieldSetElement;
-    const connectModalForm = connectModal.querySelector("form") as HTMLFormElement;
-    connectModalForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        try {
-            const data = new FormData(connectModalForm);
-            const id = data.get("id") as string;
-
-            log("Connecting to peer with id " + id);
-
-            const contact = await client.contactList.getContactById(id);
-            if(contact == null) {
-                // await client.contactList.createContact(id, )
-            }
-            await contact.connect();
-
-            log("connected");
-        } catch(e) {
-            log(e.stack ?? e);
-            throw e;
-        }
-    });
-
-    const importIdentityModal = document.querySelector("#import-identity-modal") as HTMLFieldSetElement;
-    importIdentityModal.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        const filePicker = document.createElement("input") as HTMLInputElement;
-        filePicker.type = "file";
-        filePicker.addEventListener("change", async () => {
-            log("chose file picker");
-
-            const file = filePicker.files[0];
-            const fileReader = new FileReader();
-
-            log("reading file");
-            fileReader.readAsText(file);
-            fileReader.addEventListener("load", async () => {
-                log("creating contact");
-                try {
-                    const contact = await client.contactList.createContactFromDescriptor(fileReader.result as string);
-                    log("Created contact for " + contact.username);
-                } catch(e) {
-                    log(e.message ?? e);
-                    throw e;
-                }
-            });
-        });
-        filePicker.click();
-    });
-
-    document.querySelector("#export-identity").addEventListener("click", async () => {
-        const data = await client.identity.exportIdentityFile();
-
-        const a = document.createElement("a");
-        a.href = "data:application/octet-stream," + data;
-        a.download = "identity-" + client.identity.username + ".pub";
-
-        a.click();
-    });
-
-    document.querySelector("#debug").addEventListener("click", () => {
-        
-    });
-}
-
 export function log(text: any) {
     if(typeof text == "object") text = JSON.stringify(text);
     const logsElement = document.querySelector("#logs") as HTMLTextAreaElement;
@@ -189,4 +69,7 @@ export function log(text: any) {
 
 export function getClient() {
     return client;
+}
+export function getDatabase() {
+    return db;
 }

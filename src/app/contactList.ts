@@ -1,8 +1,7 @@
 import { log } from "./index";
 import { Address } from "./address";
-import { Contact, ContactDBEntry } from "./contact";
-import { addObject, createTransaction, deleteObject, getObject, hasObject, putObject } from "./database";
-import { deobfuscate, obfuscate } from "./obscurify";
+import { Contact } from "./contact";
+import { deobfuscate } from "./obscurify";
 import { IndexedDatabase } from "./indexeddb";
 
 export class ContactList {
@@ -62,8 +61,8 @@ export class ContactList {
     }
 
 
-    async createContact(idKey: JsonWebKey, username: string = "UnknownContact", messageKey: JsonWebKey): Promise<Contact> {
-        const contact = new Contact(new Address(idKey, messageKey), username);
+    async createContact(addressKey: JsonWebKey, username: string = "UnknownContact"): Promise<Contact> {
+        const contact = new Contact(new Address(addressKey), username);
         log("add contact " + username);
         try {
             await this.addContact(contact);
@@ -75,22 +74,21 @@ export class ContactList {
         return contact;
     }
     async createContactFromDescriptor(descriptor: string): Promise<Contact> {
-        let raw: [ object, string, object ];
+        let raw: [ object, string ];
         try {
             raw = JSON.parse(await deobfuscate(descriptor));
-            if(raw.length != 3) throw new Error("Unbalanced descriptor array");
+            if(raw.length != 2) throw new Error("Unbalanced descriptor array");
 
             if(typeof raw[0] != "object") throw new TypeError("Descriptor array at index 1 is not object");
             if(typeof raw[1] != "string") throw new TypeError("Descriptor array at index 2 is not string");
-            if(typeof raw[2] != "object") throw new TypeError("Descriptor array at index 3 is not object");
         } catch(e) {
             console.error(e);
             throw new Error("Malformed descriptor");
         }
 
-        const [ idKey, username, messageKey ] = raw;
+        const [ addressKey, username ] = raw;
 
-        return await this.createContact(idKey, username, messageKey);
+        return await this.createContact(addressKey, username);
     }
     async removeContact(id: string) {
         this.contacts.delete(id);
