@@ -36,3 +36,14 @@ export function bufferToText(buffer: ArrayBuffer): string {
 
     return data.join("");
 }
+export function buffersEqual(bufferA: ArrayBuffer, bufferB: ArrayBuffer) {
+    const viewA = new Uint8Array(bufferA);
+    const viewB = new Uint8Array(bufferB);
+
+    if(viewB.length != viewA.length) return false;
+    for(let i = 0; i < viewA.length; i++) {
+        if(viewB[i] != viewA[i]) return false;
+    }
+
+    return true;
+}

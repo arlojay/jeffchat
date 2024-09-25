@@ -20,7 +20,17 @@ export class ClientSocket {
             this.peer = new Peer(preferredId, {
                 host: "peerjs.arlojay.cc",
                 port: 443,
-                
+                config: {
+                    iceServers: [
+                        { url: "stun:stun.l.google.com:19302" },
+                        
+                        // { url: "turn:turn.cloudflare.com:3478" },
+                        // { url: "turn:turn.cloudflare.com:53" },
+                        // { url: "turn:turn.cloudflare.com:80" },
+                        // { url: "turn:turn.cloudflare.com:5349" },
+                        // { url: "turn:turn.cloudflare.com:443" },
+                    ]
+                }
             });
 
             this.peer.addListener("disconnected", (id) => {
@@ -42,47 +52,69 @@ export class ClientSocket {
         });
     }
 
+    private async createNegotiationData(contact: Contact): Promise<object> {
+        return {
+            username: getClient().identity.username
+        };
+    }
+
+    private async loadNegotiationData(data: object, secureConnection: SecureConnection, contact: Contact) {
+        await contact.address.setAddressKey(secureConnection.contactPublicAddressKey);
+
+        if("username" in data && typeof data.username == "string") {
+            contact.username = data.username;
+        }
+    }
+
     private async respondToConnection(connection: DataConnection) {
-        console.log("connection");
         const contact = await this.getContact(connection);
+        console.log("connection from " + contact.username);
+        
         const secureConnection = new SecureConnection(contact, connection);
-        this.connections.set(contact.id, secureConnection);
+        this.connections.set(connection.peer, secureConnection);
 
         await this.initConnection(secureConnection);
-
-        console.log("connection opened from " + secureConnection.contact.username);
-
+        
+        let negotiationResponse: any;
         try {
-            await secureConnection.respondHandshake();
+            negotiationResponse = await secureConnection.respondNegotiation(await this.createNegotiationData(contact));
         } catch(e) {
+            console.error(e);
             secureConnection.close();
             throw e;
         }
 
+        await this.loadNegotiationData(negotiationResponse, secureConnection, contact);
+        await contact.update();
+
         secureConnection.addListener("data", data => secureConnection.contact.program.onData(data));
         secureConnection.contact.program.onConnected();
-
-        await getClient().contactList.addContact(contact);
     }
 
     public async connect(address: Address): Promise<SecureConnection> {
         const otherId = address.id;
         if(this.peer == null) throw new Error("Socket not connected");
 
+        const contact = await getClient().contactList.getContact(address);
+        console.log("connect to " + contact.username);
         const connection = this.peer.connect(otherId);
-        const contact = await this.getContact(connection);
 
         const secureConnection = new SecureConnection(contact, connection);
-        this.connections.set(otherId, secureConnection);
+        this.connections.set(connection.peer, secureConnection);
 
         await this.initConnection(secureConnection);
-
+        
+        let negotiationResponse: any;
         try {
-            await secureConnection.startHandshake();
+            negotiationResponse = await secureConnection.startNegotiation(await this.createNegotiationData(contact));
         } catch(e) {
+            console.error(e);
             secureConnection.close();
             throw e;
         }
+
+        await this.loadNegotiationData(negotiationResponse, secureConnection, contact);
+        await contact.update();
         
         secureConnection.addListener("data", data => secureConnection.contact.program.onData(data));
         secureConnection.contact.program.onConnected();
@@ -95,16 +127,23 @@ export class ClientSocket {
 
     private async initConnection(secureConnection: SecureConnection): Promise<void> {
         const connection = secureConnection.connection;
+
         const contact = await this.getContact(connection);
+
 
         await new Promise<void>((res, rej) => {
             if(connection.open) return res();
 
+            connection.addListener("iceStateChanged", () => {
+                console.debug("ICE change");
+            });
             connection.addListener("close", () => {
                 rej("Socket closed");
+                console.debug("socket closed");
                 contact.program.onDisconnected();
             });
             connection.addListener("error", error => {
+                console.debug(error);
                 rej("Socket error: " + error);
                 contact.program.onDisconnected();
             });
