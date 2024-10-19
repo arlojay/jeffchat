@@ -1,6 +1,7 @@
 import { Client } from "./client";
 import { IndexedDatabase } from "./indexeddb";
-import { initUI, populateUI } from "./ui/ui";
+import { initUI, buildContactList, postInitUI } from "./ui/ui";
+import { registerServiceWorker } from "./service-worker";
 
 let client: Client;
 let db: IndexedDatabase;
@@ -11,7 +12,9 @@ main().catch(e => {
 });
 
 async function main() {
+    const serviceWorkerPromise = registerServiceWorker("sw.js");
     initUI();
+    await serviceWorkerPromise;
 
     log("Opening database");
     db = new IndexedDatabase("jeffchat");
@@ -24,18 +27,37 @@ async function main() {
 
     await db.open();
 
+
     log("Creating client");
     client = new Client(db);
     log("Loading client");
     await client.load();
 
     await login();
-
+    
     log("Loading contacts");
     await client.contactList.loadAllContacts();
+    
+    await buildContactList();
+    await postInitUI();
 
-    await populateUI();
+
+    await connectToContacts();
 }
+
+export async function connectToContacts() {
+    const promises = new Set;
+
+    for(const id of client.contactList.contacts.keys()) {
+        promises.add(
+            client.contactList.getContactById(id)
+            .then(contact => contact.isConnected() ? null : contact.connect())
+        );
+    }
+
+    await Promise.allSettled(promises);
+}
+
 export async function login() {
     if(client.hasIdentity()) {
         log("Logging in with username " + client.identity.username);
@@ -46,10 +68,9 @@ export async function login() {
             (document.querySelector("#import-identity-modal") as HTMLFieldSetElement).hidden = false;
             (document.querySelector("#export-identity-modal") as HTMLFieldSetElement).hidden = false;
             (document.querySelector("#contacts-modal") as HTMLFieldSetElement).hidden = false;
-
-            const usernameHeading = document.querySelector("#username") as HTMLHeadingElement;
-            usernameHeading.textContent = client.identity.username;
-            usernameHeading.hidden = false;
+            (document.querySelector("#set-profile-picture-modal") as HTMLFieldSetElement).hidden = false;
+            
+            await client.save();
         } catch(e) {
             log(e);
             throw e;

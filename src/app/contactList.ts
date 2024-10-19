@@ -1,7 +1,7 @@
 import { log } from "./index";
 import { Address } from "./address";
 import { Contact } from "./contact";
-import { deobfuscate } from "./obscurify";
+import { deobfuscate } from "../common/obscurify";
 import { IndexedDatabase } from "./indexeddb";
 
 export class ContactList {
@@ -18,18 +18,16 @@ export class ContactList {
     }
 
     async addContact(contact: Contact) {
-        log("checking if contact exists");
-        if(this.contacts.has(contact.address.id) || await this.db.objectStore("contacts").has(contact.address.id)) {
-            log("updating existing contact");
+        if(this.contacts.has(contact.id) || await this.db.objectStore("contacts").has(contact.id)) {
             return await this.updateContact(contact);
         }
 
-        log("writing new contact");
-        this.contacts.set(contact.address.id, contact);
-        log("adding object to db");
+        this.contacts.set(contact.id, contact);
+        
         const data = await contact.serialize();
-        console.log(data);
         await this.db.objectStore("contacts").add(data);
+        
+        await contact.initPrograms();
     }
     
     async hasContact(address: Address): Promise<boolean> {
@@ -58,6 +56,17 @@ export class ContactList {
         }
         
         return contact;
+    }
+    async removeContact(address: Address) {
+        this.removeContactById(address.id);
+    }
+    async removeContactById(id: string) {
+        const contact = this.contacts.get(id);
+        if(contact != null) {
+            contact.getConnection()?.close?.();
+        }
+        this.contacts.delete(id);
+        await this.db.objectStore("contacts").delete(id);
     }
 
 
@@ -89,10 +98,6 @@ export class ContactList {
         const [ addressKey, username ] = raw;
 
         return await this.createContact(addressKey, username);
-    }
-    async removeContact(id: string) {
-        this.contacts.delete(id);
-        await this.db.objectStore("contacts").delete(id);
     }
 
     async loadAllContacts() {

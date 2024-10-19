@@ -1,4 +1,4 @@
-import { log } from ".";
+import { log } from "../app";
 
 export function bufferToBase64(data: ArrayBuffer|Uint8Array): Promise<string> {
     return new Promise((res, rej) => {
@@ -12,9 +12,17 @@ export function bufferToBase64(data: ArrayBuffer|Uint8Array): Promise<string> {
         })
     });
 }
+export function bufferToHex(data: ArrayBuffer|Uint8Array): string {
+    const dataArray = data instanceof ArrayBuffer ? new Uint8Array(data) : data;
+
+    return Array.from(dataArray).map(v => v.toString(16).padStart(2, "0")).join("");
+}
 export async function base64ToBuffer(base64: string) {
     const url = "data:application/octet-stream;base64," + base64;
     return await fetch(url).then(v => v.arrayBuffer());
+}
+export function hexToBuffer(data: string): ArrayBuffer {
+    return new Uint8Array(data.match(/.{2}/g).map(v => parseInt(v, 16))).buffer;
 }
 
 export function textToBuffer(text: string): ArrayBuffer {

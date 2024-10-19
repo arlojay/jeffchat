@@ -3,22 +3,34 @@ import { Serializable } from "./serializable";
 import { Address, AddressDBEntry } from "./address";
 import { MasterContactProgram } from "./contactProgram/masterContactProgram";
 import { SecureConnection } from "./secureConnection";
+import { TypedEmitter } from "tiny-typed-emitter";
+import { ProfilePicture, ProfilePictureDBEntry } from "./profilePicture";
 
 export interface ContactDBEntry {
     id: string,
     username: string,
-    address: AddressDBEntry
+    address: AddressDBEntry,
+    profilePicture: ProfilePictureDBEntry
 }
 
-export class Contact implements Serializable {
+export interface ContactEvents {
+    connected: (connection: SecureConnection) => void;
+    disconnected: (connection: SecureConnection) => void;
+}
+
+export class Contact extends TypedEmitter<ContactEvents> implements Serializable {
     username: string;
     address: Address;
     program: MasterContactProgram;
+    profilePicture: ProfilePicture;
 
     constructor(address: Address = new Address, username: string = "anonymous") {
+        super();
+        
         this.username = username;
         this.address = address;
         this.program = new MasterContactProgram(this);
+        this.profilePicture = new ProfilePicture(this);
     }
     get id() {
         return this.address.id;
@@ -27,7 +39,7 @@ export class Contact implements Serializable {
         await this.program.init();
     }
 
-    public isConnecting() {
+    public isConnected() {
         return getClient().socket.connections.has(this.address.id);
     }
     public isAuthenticated() {
@@ -44,7 +56,7 @@ export class Contact implements Serializable {
         if(existingConnection != null) return existingConnection;
 
         const client = getClient();
-        const newConnection = await client.socket.connect(this.address);
+        const newConnection = await client.socket.createSocketConnection(this.address);
 
         return newConnection;
     }
@@ -53,12 +65,14 @@ export class Contact implements Serializable {
         return {
             id: this.address.id,
             username: this.username,
-            address: await this.address.serialize()
+            address: await this.address.serialize(),
+            profilePicture: await this.profilePicture.serialize()
         };
     }
-    public async deserialize(data: any) {
+    public async deserialize(data: ContactDBEntry) {
         this.username = data.username;
         await this.address.deserialize(data.address);
+        if("profilePicture" in data) await this.profilePicture.deserialize(data.profilePicture);
     }
 
     

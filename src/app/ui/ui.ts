@@ -1,49 +1,56 @@
 import "./style.scss";
 import { getClient, getDatabase, log, login } from "..";
-import { createTab, initTabs } from "./tabs";
+import { showContentTab, SidebarTab } from "./tabs";
+import { ContactListElement } from "./contactList";
+import { ProfileCard } from "./profileCard";
+import { RebuildableFontAwesomeIcon } from "./rebuildableFontAwesomeIcon";
+import { HoverText } from "./hoverText";
+
+const settingsTab: SidebarTab = new SidebarTab({
+    contents: new RebuildableFontAwesomeIcon(() => ["solid", "gear"])
+});
+const contactsTab: SidebarTab = new SidebarTab({
+    contents: new RebuildableFontAwesomeIcon(() => ["solid", "address-book"])
+});
+let contactListElement: ContactListElement = new ContactListElement;
 
 export async function initUI() {
     log("Creating modals");
     initModals();
-    initTabs();
+
+    const contentTabs = document.querySelector("#sidebar");
+
+    contentTabs.append(
+        settingsTab.element,
+        contactsTab.element
+    );
+    
+    settingsTab.addListener("click", () => {
+        showContentTab(document.querySelector("#settings-tab") as HTMLElement);
+    });
+    contactsTab.addListener("click", () => {
+        showContentTab(document.querySelector("#contacts-tab") as HTMLElement);
+    });
+
+    contactListElement.addListener("remove", contact => {
+        contactListElement.update();
+    });
+    contactListElement.addListener("connect", contact => {
+        console.log("connecting to " + contact.username);
+    });
 }
 
-export async function populateUI() {
-    const contactList = document.querySelector("#contacts");
-    for await(const id of getClient().contactList.contacts.keys()) {
-        const contact = await getClient().contactList.getContactById(id);
+export async function postInitUI() {
+    const mainProfileCard = new ProfileCard(getClient().identity.self);
+    document.querySelector("#main-profile-card").append(mainProfileCard.element);
+}
 
-        const listItem = document.createElement("li");
+export async function buildContactList() {
+    contactListElement.setContactList(getClient().contactList);
+    await contactListElement.update();
 
-        const label = document.createElement("span");
-        label.textContent = contact.username;
-
-        const connectButton = document.createElement("button");
-        connectButton.textContent = "Open Chat";
-        connectButton.addEventListener("click", async () => {
-            connectButton.disabled = true;
-
-            console.log(contact);
-            try {
-                const connection = await contact.connect();
-                connection.addListener("close", () => {
-                    connectButton.disabled = false;
-                });
-
-                const tab = createTab("chat");
-                tab.textContent = contact.username;
-
-                tab.addEventListener("click", () => {
-                    document.querySelector("#contact-username").textContent = contact.username;
-                })
-            } catch(e) {
-                connectButton.disabled = false;
-            }
-        });
-        
-        listItem.append(label, connectButton);
-        contactList.appendChild(listItem);
-    }
+    const contactList = document.querySelector("#contacts-modal");
+    contactList.replaceChildren(contactListElement.element);
 }
 
 function initModals() {
@@ -70,30 +77,6 @@ function initModals() {
         }
     });
 
-    const connectModal = document.querySelector("#connect-modal") as HTMLFieldSetElement;
-    const connectModalForm = connectModal.querySelector("form") as HTMLFormElement;
-    connectModalForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
-
-        try {
-            const data = new FormData(connectModalForm);
-            const id = data.get("id") as string;
-
-            log("Connecting to peer with id " + id);
-
-            const contact = await getClient().contactList.getContactById(id);
-            if(contact == null) {
-                // await client.contactList.createContact(id, )
-            }
-            await contact.connect();
-
-            log("connected");
-        } catch(e) {
-            log(e.stack ?? e);
-            throw e;
-        }
-    });
-
     const importIdentityModal = document.querySelector("#import-identity-modal") as HTMLFieldSetElement;
     importIdentityModal.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -112,6 +95,7 @@ function initModals() {
                 log("creating contact");
                 try {
                     const contact = await getClient().contactList.createContactFromDescriptor(fileReader.result as string);
+                    await contact.connect();
                     log("Created contact for " + contact.username);
                 } catch(e) {
                     log(e.message ?? e);
@@ -120,6 +104,25 @@ function initModals() {
             });
         });
         filePicker.click();
+    });
+
+    const profilePictureModal = document.querySelector("#set-profile-picture-modal") as HTMLFieldSetElement;
+    const profilePictureModalForm = profilePictureModal.querySelector("form") as HTMLFormElement;
+    profilePictureModalForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        try {
+            const data = new FormData(profilePictureModalForm);
+            const email = data.get("email") as string;
+
+            const profilePicture = getClient().identity.self.profilePicture;
+            await profilePicture.setGravatar(email);
+            log("Saving client config");
+            await getClient().save();
+        } catch(e) {
+            log(e.stack ?? e);
+            throw e;
+        }
     });
 
     document.querySelector("#export-identity").addEventListener("click", async () => {
@@ -151,6 +154,8 @@ function initModals() {
         });
         request.addEventListener("blocked", () => {
             log("Database deletion blocked");
-        })
-    })
+        });
+    });
+
+    const hoverText = new HoverText(document.body);
 }

@@ -1,20 +1,20 @@
-import { Address } from "./address";
-import { exportJwkPair, exportJwk, importJwkPair } from "./cryptoUtil";
+import { exportJwkPair, importJwkPair } from "../common/cryptoUtil";
 import { Serializable } from "./serializable";
-import { obfuscate } from "./obscurify";
+import { obfuscate } from "../common/obscurify";
+import { Contact } from "./contact";
 
 export class Identity implements Serializable {
-    username: string;
-    address: Address;
+    public self: Contact = new Contact;
+
     addressKey: CryptoKeyPair;
     messageKey: CryptoKeyPair;
 
-    constructor() {
-        this.username = "";
-        this.address = new Address;
+    get username() {
+        return this.self.username;
     }
+
     async createNew(username: string) {
-        this.username = username;
+        this.self.username = username;
 
         this.addressKey = await crypto.subtle.generateKey(
             {
@@ -36,23 +36,18 @@ export class Identity implements Serializable {
             [ "deriveKey", "deriveBits" ]
         );
 
-        this.address = new Address(
-            await exportJwk(this.addressKey.publicKey),
-            await exportJwk(this.messageKey.publicKey)
-        );
+        await this.self.address.setAddressKey(this.addressKey.publicKey);
     }
 
     async serialize(): Promise<any> {
         return {
-            username: this.username,
-            address: await this.address.serialize(),
+            contact: await this.self.serialize(),
             addressKey: await exportJwkPair(this.addressKey),
             messageKey: await exportJwkPair(this.messageKey)
         }
     }
     async deserialize(data: any): Promise<void> {
-        this.username = data.username;
-        this.address.deserialize(data.address);
+        await this.self.deserialize(data.contact);
         this.addressKey = await importJwkPair(data.addressKey, {
             name: "RSA-OAEP",
             hash: "SHA-256",
@@ -65,7 +60,7 @@ export class Identity implements Serializable {
 
     async exportIdentityFile(): Promise<string> {
         return await obfuscate(JSON.stringify([
-            this.address.addressKey, this.username
+            this.self.address.addressKey, this.username
         ]));
     }
 }

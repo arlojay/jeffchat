@@ -1,4 +1,4 @@
-import { exportJwk, importJwk } from "./cryptoUtil";
+import { exportJwk, importJwk } from "../common/cryptoUtil";
 import { Serializable } from "./serializable";
 
 export interface AddressDBEntry {
@@ -15,7 +15,7 @@ export class Address implements Serializable {
         else this.id = "A" + this.addressKey.n.replace(/\_/g, "0_").replace(/\-/g, "1-") + "Z";
     }
 
-    constructor(identificationKey: JsonWebKey = null, messagingKey: JsonWebKey = null) {
+    constructor(identificationKey: JsonWebKey = null) {
         this.addressKey = identificationKey;
         this.recalcualteId();
     }

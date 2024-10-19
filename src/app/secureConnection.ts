@@ -1,12 +1,12 @@
-import { DataConnection } from "peerjs";
-import { Contact } from "./contact";
-import { getClient } from ".";
 import { decode, encode } from "@msgpack/msgpack";
-import EventEmitter from "events";
-import { deriveMessageSecret, exportJwk, importJwk } from "./cryptoUtil";
-import { HandshakeChallenge } from "./handshakeChallenge";
+import { DataConnection, PeerError } from "peerjs";
+import { TypedEmitter } from "tiny-typed-emitter";
+import { getClient } from ".";
 import { Address } from "./address";
-import { base64ToBuffer, buffersEqual, bufferToBase64 } from "./bufferUtil";
+import { base64ToBuffer, buffersEqual, bufferToBase64 } from "../common/bufferUtil";
+import { Contact } from "./contact";
+import { deriveMessageSecret, exportJwk, importJwk } from "../common/cryptoUtil";
+import { HandshakeChallenge } from "./handshakeChallenge";
 
 const MAX_RSA_BLOCK_SIZE = 190;
 const OUTPUT_RSA_BLOCK_SIZE = 256;
@@ -152,7 +152,14 @@ abstract class ECNegotiationPacket {
     }
 }
 
-export class SecureConnection extends EventEmitter {
+export interface SecureConnectionEvents {
+    close: () => void;
+    rawdata: (data: any) => void;
+    error: (error: PeerError<"not-open-yet" | "message-too-big" | "negotiation-failed" | "connection-closed">) => void;
+    iceStateChanged: (state: RTCIceConnectionState) => void;
+    data: (data: PacketData) => void;
+}
+export class SecureConnection extends TypedEmitter<SecureConnectionEvents> {
     public contact: Contact;
     public authenticated: boolean = false;
     private secretKey: CryptoKey;
@@ -242,10 +249,14 @@ export class SecureConnection extends EventEmitter {
     }
 
     public async send(data: PacketData) {
+        if(!this.connected) throw new Error("Socket not connected");
+
         const packet = await this.encrypt(data);
         this.connection.send(packet);
     }
     public async sendUnsecure(data: PacketData) {
+        if(!this.connected) throw new Error("Socket not connected");
+
         this.connection.send({ d: data });
     }
 

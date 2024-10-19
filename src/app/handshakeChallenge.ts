@@ -1,5 +1,5 @@
 import { DataConnection } from "peerjs";
-import { buffersEqual } from "./bufferUtil";
+import { buffersEqual } from "../common/bufferUtil";
 
 abstract class HandshakeStage {
     type: "handshake";

@@ -1,7 +1,5 @@
-import { log } from "./index";
 import { ClientSocket } from "./clientSocket";
 import { ContactList } from "./contactList";
-import { addObject, getObject, putObject } from "./database";
 import { Identity } from "./identity";
 import { IndexedDatabase } from "./indexeddb";
 
@@ -20,7 +18,7 @@ export class Client {
     }
 
     async login() {
-        await this.socket.login(this.identity.address.id);
+        await this.socket.login(this.identity.self.address.id);
     }
 
     async save() {
@@ -36,6 +34,6 @@ export class Client {
         await this.contactList.loadAllContacts();
     }
     hasIdentity(): boolean {
-        return this.identity.address.addressKey != null;
+        return this.identity.self.address.addressKey != null;
     }
 }

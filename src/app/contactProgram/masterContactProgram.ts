@@ -11,10 +11,16 @@ export type ContactProgramEntry = { factory: ContactProgramFactory, options: Con
 
 export class MasterContactProgram extends ContactProgram {
     protected static programs: Set<ContactProgramEntry> = new Set;
-    protected static runningPrograms: Map<ContactProgramEntry, ContactProgram> = new Map;
 
     public static registerProgram(factory: ContactProgramFactory, options: ContactProgramOptions) {
         this.programs.add({factory, options});
+    }
+
+    
+    protected runningPrograms: Map<ContactProgramEntry, ContactProgram> = new Map;
+
+    constructor(contact: Contact) {
+        super(contact);
     }
 
     private static async forEachProgram(callback: (program: ContactProgramEntry) => Promise<void>) {
@@ -26,45 +32,44 @@ export class MasterContactProgram extends ContactProgram {
         await Promise.all(promises);
     }
 
-    constructor(contact: Contact) {
-        super(contact);
-    }
-
     async stop() {
         await MasterContactProgram.forEachProgram(async program => {
-            const runningProgram = MasterContactProgram.runningPrograms.get(program);
+            const runningProgram = this.runningPrograms.get(program);
             if(runningProgram != null) {
-                MasterContactProgram.runningPrograms.delete(program);
+                this.runningPrograms.delete(program);
                 await runningProgram.stop();
             }
         });
     }
 
     async init() {
+        console.log("init");
         await MasterContactProgram.forEachProgram(async program => {
             if(program.options.startAt == "runtime") {
-                const runningProgram = MasterContactProgram.runningPrograms.get(program);
+                const runningProgram = this.runningPrograms.get(program);
                 if(runningProgram != null) {
-                    MasterContactProgram.runningPrograms.delete(program);
+                    this.runningPrograms.delete(program);
                     await runningProgram.stop();
                 }
 
                 const newRunningProgram = program.factory(this.contact);
                 await newRunningProgram.init();
-                MasterContactProgram.runningPrograms.set(program, newRunningProgram);
+                this.runningPrograms.set(program, newRunningProgram);
             }
         });
     }
 
     async onConnected() {
+        console.log(MasterContactProgram.programs);
+        console.log(this.runningPrograms);
         await MasterContactProgram.forEachProgram(async program => {
-            const runningProgram = MasterContactProgram.runningPrograms.get(program);
+            const runningProgram = this.runningPrograms.get(program);
 
             if(program.options.startAt == "connection") {
                 if(runningProgram != null) return;
 
                 const newRunningProgram = program.factory(this.contact);
-                MasterContactProgram.runningPrograms.set(program, newRunningProgram);
+                this.runningPrograms.set(program, newRunningProgram);
                 await newRunningProgram.init();
             } else {
                 await runningProgram.onConnected();
@@ -74,12 +79,12 @@ export class MasterContactProgram extends ContactProgram {
 
     async onDisconnected() {
         await MasterContactProgram.forEachProgram(async program => {
-            const runningProgram = MasterContactProgram.runningPrograms.get(program);
+            const runningProgram = this.runningPrograms.get(program);
 
             if(program.options.stopAt == "disconnection") {
                 if(runningProgram == null) return;
 
-                MasterContactProgram.runningPrograms.delete(program);
+                this.runningPrograms.delete(program);
                 await runningProgram.stop();
             } else {
                 await runningProgram.onDisconnected();
@@ -89,12 +94,21 @@ export class MasterContactProgram extends ContactProgram {
 
     async onData(data: PacketData) {
         await MasterContactProgram.forEachProgram(async program => {
-            const runningProgram = MasterContactProgram.runningPrograms.get(program);
+            const runningProgram = this.runningPrograms.get(program);
             if(runningProgram != null) await runningProgram.onData(data);
         });
+    }
+
+    public getProgram(programType: typeof ContactProgram): InstanceType<typeof programType> {
+        for(const program of this.runningPrograms.values()) {
+            if(program instanceof programType) return program;
+        }
+
+        return null;
     }
 }
 
 
 // Register programs
 import "./heartbeatProgram";
+import "./chatProgram";

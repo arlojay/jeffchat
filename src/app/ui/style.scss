@@ -5,6 +5,8 @@
 @import './fontawesome/scss/solid.scss';
 
 $color_main: #063ed8;
+$color_danger: #ec2c2c;
+$color_link: #9bbfff;
 
 html, body {
     width: 100%;
@@ -20,11 +22,22 @@ body {
     color: white;
     font: 1rem 'Baloo Da 2', Arial, sans-serif;
     
-    margin: 0px;
+    margin: 0;
     overflow: hidden;
 
     display: grid;
     grid-template-columns: 4rem 1fr;
+    grid-template-rows: 1fr;
+}
+
+fieldset {
+    border: 0.1rem solid #fff;
+}
+
+%one-line-overflowing-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 %input {
@@ -36,18 +49,31 @@ body {
     font: inherit;
 
     padding: 0.1rem 0.5rem;
+
+    &.danger {
+        background: $color_danger;
+    }
+    &:focus-visible {
+        outline: 0.1rem solid #fff;
+    }
 }
 
-input[type="text"] {
+form .section {
+    margin-bottom: 0.5rem;
+}
+
+input[type="text"], input[type="email"] {
     @extend %input;
 
-    background: #111;
+    background: #222;
 }
 
 button, input[type="submit"] {
     @extend %input;
 
     user-select: none;
+    display: inline-flex;
+    align-items: center;
 
     &:not(:disabled) {
         cursor: pointer;
@@ -58,12 +84,18 @@ button, input[type="submit"] {
 
         pointer-events: none;
     }
-    &:focus-visible {
-        outline: 0.1rem solid #fff;
-    }
     &:active {
         background: mix($color_main, #000, 60%);
     }
+}
+
+label + input {
+    margin-left: 0.5rem;
+}
+
+a {
+    color: $color_link;
+    cursor: pointer;
 }
 
 #logs {
@@ -77,7 +109,8 @@ button, input[type="submit"] {
 }
 
 #sidebar {
-    background: #333;
+    background: #131313;
+    height: 100%;
 
     display: flex;
     flex-direction: column;
@@ -88,12 +121,18 @@ button, input[type="submit"] {
     padding: 0.5rem;
     box-sizing: border-box;
 
-    box-shadow: 0px 0px 4px #0008;
+    box-shadow: 0 0 0.2rem #0008;
     
     .sidebar-option {
         width: 3rem;
         height: 3rem;
         background: #222;
+
+        font-size: 2rem;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
 
         overflow: hidden;
         overflow-wrap: break-word;
@@ -104,7 +143,7 @@ button, input[type="submit"] {
 }
 
 #content {
-    background: #181818;
+    background: #000000;
 
     height: 100%;
     z-index: 0;
@@ -117,8 +156,13 @@ button, input[type="submit"] {
         grid-template-rows: max-content 1fr;
         
         .top {
-            background: #444;
-            box-shadow: 0px 0px 4px #0008;
+            background: #282828;
+            box-shadow: 0 0 0.2rem #0008;
+
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 1rem;
 
             padding: 1rem 2rem;
             margin: 0;
@@ -133,15 +177,13 @@ button, input[type="submit"] {
     }
 }
 
-[data-tabname="chat"] .main {
+.content-tab.chat .main {
     display: grid;
     grid-template-rows: 1fr max-content;
 
     .chat-logs {
-        display: flex;
-        flex-direction: column;
-
-        overflow: hidden;
+        overflow-x: hidden;
+        overflow-y: auto;
 
         .message {
             --color: #000;
@@ -186,7 +228,7 @@ button, input[type="submit"] {
                 overflow-wrap: anywhere;
                 white-space: balance;
 
-                margin: 0px;
+                margin: 0;
                 padding: 0.1rem 1rem;
                 box-sizing: border-box;
             }
@@ -200,4 +242,119 @@ button, input[type="submit"] {
         grid-template-columns: 1fr max-content;
         gap: 1rem;
     }
+}
+
+
+.content-tab.contacts {
+    .contacts {
+        list-style: none;
+        padding: 0;
+
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+
+        li {
+            background: #111;
+
+            display: grid;
+            grid-template-columns: repeat(2, 2em) 1fr;
+            gap: 0.25rem;
+            padding: 0.5rem;
+
+            align-items: center;
+
+            button {
+                height: 100%;
+            }
+
+            .username {
+                font-weight: bold;
+                margin-left: 0.5rem;
+            }
+        }
+    }
+}
+
+.profile-card {
+    display: grid;
+    width: 16rem;
+    background: #111;
+    box-shadow: 0 0 0.25rrem #000;
+
+    grid-template-areas: "P" "U" "I";
+    grid-template-rows: 16rem max-content max-content;
+    grid-template-columns: 1fr;
+    
+    padding: 0.5rem;
+
+    .profile-picture {
+        display: block;
+        width: 100%;
+        height: 100%;
+        grid-area: P;
+    }
+    .username {
+        @extend %one-line-overflowing-text;
+
+        grid-area: U;
+        text-align: center;
+
+        font-weight: bold;
+        font-size: 1.5rem;
+    }
+    .id {
+        @extend %one-line-overflowing-text;
+        grid-area: I;
+        font-size: 0.7rem;
+        color: #888;
+    }
+}
+
+.profile-picture {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    grid-template-rows: 1fr max-content;
+    grid-template-columns: 1fr max-content;
+
+    img {
+        width: 100%;
+        height: 100%;
+
+        grid-area: 1 / 1 / 3 / 3;
+    }
+
+    .indicator {
+        grid-area: 2 / 2 / 3 / 3;
+        width: 0.5rem;
+        height: 0.5rem;
+
+        box-shadow: 0 0 0.25rem #000;
+
+        &[data-indicator="online"] {
+            background: #8f8;
+        }
+        &[data-indicator="offline"] {
+            background: #f88;
+        }
+    }
+}
+
+.hover-text {
+    position: fixed;
+    top: 0;
+    left: 0;
+
+    display: block;
+    z-index: 3;
+
+    background: #000;
+    color: #fff;
+    border: 1px solid #fff;
+    box-shadow: 0 0 0.5rem #000;
+
+    pointer-events: none;
+
+    padding: 0.125rem 0.5rem;
 }
