@@ -26,6 +26,7 @@ export class ChatEndpoint extends TypedEmitter<ChatEndpointEvents> {
     public name: string = "";
     public members: Address[] = new Array;
     public messages: ChatMessage[] = new Array;
+    private unreadMessages: ChatMessage[] = new Array;
 
     public constructor() {
         super();
@@ -33,11 +34,22 @@ export class ChatEndpoint extends TypedEmitter<ChatEndpointEvents> {
 
     public addMessage(message: ChatMessage) {
         this.messages.push(message);
+        this.unreadMessages.push(message);
         this.emit("messageAdded", message);
     }
 
     public setName(name: string) {
         this.name = name;
         this.emit("nameChanged", name);
+    }
+    
+    public getUnreadMessageCount(): number {
+        return this.unreadMessages.length;
+    }
+    public getUnreadMessages() {
+        return this.unreadMessages;
+    }
+    public clearUnreadMessages() {
+        this.unreadMessages.splice(0);
     }
 }

@@ -59,16 +59,16 @@ export class ChatScreen extends RebuildableHTMLElement<ChatScreenEvents> {
 
     public setEndpoint(chat: ChatEndpoint) {
         if(this.nameChangedEventHandler != null)
-            this.chat.off("nameChanged", this.nameChangedEventHandler);
+            this.chat.removeListener("nameChanged", this.nameChangedEventHandler);
 
         if(this.messageAddedEventHandler != null)
-            this.chat.off("messageAdded", this.messageAddedEventHandler);
+            this.chat.removeListener("messageAdded", this.messageAddedEventHandler);
         
         this.chat = chat;
-        this.chat.on("nameChanged", this.nameChangedEventHandler = name => {
+        this.chat.addListener("nameChanged", this.nameChangedEventHandler = name => {
             this.update();
         });
-        this.chat.on("messageAdded", this.messageAddedEventHandler = message => {
+        this.chat.addListener("messageAdded", this.messageAddedEventHandler = message => {
             this.addMessage(message);
         });
 

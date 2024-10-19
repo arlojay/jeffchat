@@ -17,12 +17,29 @@ export function showContentTab(contentTab: HTMLElement | RebuildableHTMLElement)
     }
 }
 
+export function isContentTabShown(contentTab: HTMLElement | RebuildableHTMLElement) {
+    const content = document.querySelector("#content");
+
+    for(const otherContentTab of content.querySelectorAll(".content-tab") as NodeListOf<HTMLDivElement>) {
+        if(otherContentTab.hidden) continue;
+
+        if(contentTab instanceof HTMLElement) {
+            if(otherContentTab == contentTab) return true;
+        }
+        if(contentTab instanceof RebuildableHTMLElement) {
+            if(otherContentTab == contentTab.element) return true;
+        }
+    }
+
+    return false;
+}
+
 export interface SidebarTabEvents {
     "click": () => void;
 }
 
 export interface SidebarTabSettings {
-    contents: RebuildableHTMLElement | (() => HTMLElement) | HTMLElement | string,
+    contents: RebuildableHTMLElement | (() => Promise<HTMLElement>) | (() => HTMLElement) | HTMLElement | string,
     hoverText?: string | null;
 }
 
@@ -49,7 +66,7 @@ export class SidebarTab extends RebuildableHTMLElement<SidebarTabEvents> {
         if(settings.contents instanceof Function) {
             const contents = settings.contents as Function;
 
-            this.contentGetter = async () => contents();
+            this.contentGetter = async () => await contents();
         }
         if(settings.contents instanceof HTMLElement) {
             const contents = settings.contents as HTMLElement;

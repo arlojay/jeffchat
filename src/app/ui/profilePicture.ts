@@ -11,9 +11,9 @@ export interface ProfilePictureElementSettings {
 }
 
 export class ProfilePictureElement extends RebuildableHTMLElement<ProfilePictureElementEvents> {
-    contact: Contact;
-    showIndicator: boolean;
-    hoverText: string | null;
+    private contact: Contact;
+    private showIndicator: boolean;
+    private image: HTMLImageElement;
 
     public constructor(contact: Contact, settings?: ProfilePictureElementSettings | null) {
         super();
@@ -29,11 +29,12 @@ export class ProfilePictureElement extends RebuildableHTMLElement<ProfilePicture
         container.classList.add("profile-picture");
 
 
-        const image = document.createElement("img");
-        console.log(this.contact);
-        image.src = await this.contact.profilePicture.getIconSource(64);
+        if(this.image == null) {
+            this.image ??= document.createElement("img");
+            this.image.src = await this.contact.profilePicture.getIconSource(64);
+        }
 
-        container.append(image);
+        container.append(this.image);
         
         if(this.showIndicator) {
             const indicator = document.createElement("div");

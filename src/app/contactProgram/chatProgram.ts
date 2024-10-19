@@ -3,10 +3,10 @@ import { ChatEndpoint, ChatMessage } from "../chatEndpoint";
 import { PacketData, SecureConnection } from "../secureConnection";
 import { ChatScreen } from "../ui/chat";
 import { ProfilePictureElement } from "../ui/profilePicture";
-import { RebuildableTextNode } from "../ui/rebuildableTextNode";
-import { showContentTab, SidebarTab } from "../ui/tabs";
+import { isContentTabShown, showContentTab, SidebarTab } from "../ui/tabs";
 import { ContactProgram } from "./contactProgram";
 import { MasterContactProgram } from "./masterContactProgram";
+import { ChatEndpointOverlay } from "../ui/chatEndpointOverlay";
 
 MasterContactProgram.registerProgram(
     contact => new ChatProgram(contact),
@@ -26,14 +26,28 @@ export class ChatProgram extends ContactProgram {
     async init() {
         console.log("init chat");
 
+        const profilePicture = new ProfilePictureElement(this.contact, {
+            showIndicator: true
+        });
+        const chatEndpointOverlay = new ChatEndpointOverlay(this.chatEndpoint);
+
         this.chatTab = new SidebarTab({
-            contents: new ProfilePictureElement(this.contact, {
-                showIndicator: true
-            }),
+            contents: async () => {
+                const element = document.createElement("div");
+                element.classList.add("contact-icon");
+
+                await profilePicture.update();
+                await chatEndpointOverlay.update();
+
+                element.append(profilePicture.element, chatEndpointOverlay.element);
+
+                return element;
+            },
             hoverText: this.contact.username
         });
 
         this.screen.addListener("message", async rawMessage => {
+            if(this.isWhitespace(rawMessage)) return;
             await this.sendMessage(rawMessage);
         });
 
@@ -41,8 +55,17 @@ export class ChatProgram extends ContactProgram {
 
         this.chatTab.addListener("click", () => {
             showContentTab(this.screen);
+            this.chatEndpoint.clearUnreadMessages();
+            this.chatTab.update();
         });
         document.querySelector("#sidebar").append(this.chatTab.element);
+
+        this.chatEndpoint.addListener("messageAdded", message => {
+            if(isContentTabShown(this.screen)) {
+                this.chatEndpoint.clearUnreadMessages();
+            }
+            chatEndpointOverlay.update();
+        });
     }
     async stop() {
         this.chatTab.remove();
@@ -58,10 +81,16 @@ export class ChatProgram extends ContactProgram {
 
     async onData(data: PacketData) {
         if(data.type == "message") {
+            if(this.isWhitespace(data.content)) return;
+
             const message = new ChatMessage(data.content, this.contact.address, new Date);
 
             this.chatEndpoint.addMessage(message);
         }
+    }
+
+    private isWhitespace(text: string): boolean {
+        return text.replace(/[\s\t]/g, "").length == 0;
     }
 
     private async waitForConnection() {

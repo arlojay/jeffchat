@@ -2,6 +2,7 @@ import { DefaultListener, ListenerSignature, TypedEmitter } from "tiny-typed-emi
 
 export abstract class RebuildableHTMLElement<T extends ListenerSignature<T> = DefaultListener> extends TypedEmitter<T> {
     private _element: HTMLElement = document.createElement("div");
+    private modifiers: Set<(element: HTMLElement) => void> = new Set;
 
     protected constructor() {
         super();
@@ -21,6 +22,12 @@ export abstract class RebuildableHTMLElement<T extends ListenerSignature<T> = De
 
     public async update() {
         this.element = await this.createElement();
+    }
+    public async addModifier(modifier: (element: HTMLElement) => void) {
+        this.modifiers.add(modifier);
+    }
+    public async removeModifier(modifier: (element: HTMLElement) => void) {
+        this.modifiers.delete(modifier);
     }
 
     protected abstract createElement(): Promise<HTMLElement>;
