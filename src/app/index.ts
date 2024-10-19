@@ -2,9 +2,11 @@ import { Client } from "./client";
 import { IndexedDatabase } from "./indexeddb";
 import { initUI, buildContactList, postInitUI } from "./ui/ui";
 import { registerServiceWorker } from "./service-worker";
+import { AudioManager } from "./audio/audioManager";
 
 let client: Client;
 let db: IndexedDatabase;
+let audioManager: AudioManager;
 
 main().catch(e => {
     log(e.stack ?? e);
@@ -12,9 +14,13 @@ main().catch(e => {
 });
 
 async function main() {
+    audioManager = new AudioManager(new AudioContext);
+
     const serviceWorkerPromise = registerServiceWorker("sw.js");
+    const loadSoundsPromise = loadSounds();
     initUI();
     await serviceWorkerPromise;
+    
 
     log("Opening database");
     db = new IndexedDatabase("jeffchat");
@@ -39,10 +45,15 @@ async function main() {
     await client.contactList.loadAllContacts();
     
     await buildContactList();
+    await loadSoundsPromise;
     await postInitUI();
 
 
     await connectToContacts();
+}
+
+async function loadSounds() {
+    await audioManager.createAudioClip("new-message", "resources/audio/new-message.wav");
 }
 
 export async function connectToContacts() {
@@ -93,4 +104,7 @@ export function getClient() {
 }
 export function getDatabase() {
     return db;
+}
+export function getAudioManager() {
+    return audioManager;
 }

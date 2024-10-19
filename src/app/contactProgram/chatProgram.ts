@@ -1,4 +1,4 @@
-import { getClient } from "..";
+import { getAudioManager, getClient } from "..";
 import { ChatEndpoint, ChatMessage } from "../chatEndpoint";
 import { PacketData, SecureConnection } from "../secureConnection";
 import { ChatScreen } from "../ui/chat";
@@ -63,6 +63,8 @@ export class ChatProgram extends ContactProgram {
         this.chatEndpoint.addListener("messageAdded", message => {
             if(isContentTabShown(this.screen)) {
                 this.chatEndpoint.clearUnreadMessages();
+            } else {
+                getAudioManager().getAudioClip("new-message").play();
             }
             chatEndpointOverlay.update();
         });
